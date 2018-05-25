@@ -1,3 +1,4 @@
+![Logo](logo.png)
 # Bag of STARs
 STAR mapping on slurm clusters in bags.
 
@@ -11,6 +12,7 @@ git clone https://github.com/iosonofabio/bag_of_stars.git
 ```
 
 ## Usage
+Call bag of stars from the `bos` folder:
 ```bash
 python bag_of_stars.py --genomeDir <your STAR_DIR> --output <your output folder> <your fastq root folder>
 ```
