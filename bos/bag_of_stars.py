@@ -52,6 +52,15 @@ if __name__ == '__main__':
             '--time', default='2-0:0:0',
             help='Time limit on each group of STAR jobs (see slurm docs for format info)',
             )
+    pa.add_argument(
+            '--htseq',
+            action='store_true',
+            help='Call htseq-count at the end of the STAR mapping',
+            )
+    pa.add_argument(
+            '--annotationFile',
+            default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/human_tiny_with_ERCC.gtf',
+            help='File with the GTF feature annotations for htseq')
     args = pa.parse_args()
 
     print('Make output root folder')
@@ -61,8 +70,8 @@ if __name__ == '__main__':
 
     if not args.local:
         print('Make job log folder')
+        log_fdn = args.output+'logs/'
         if not args.dry:
-            log_fdn = args.output+'logs/'
             os.makedirs(log_fdn, exist_ok=True)
 
     print('Scan input folder')
@@ -153,6 +162,27 @@ if __name__ == '__main__':
                 if not args.dry:
                     sp.run(call, check=True) 
 
+            if args.htseq:
+                print('All STAR mappings done, call htseq-count')
+                mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in samplenames]
+                htseq_fn = args.output+'counts.tsv'
+                call = [
+                    os.getenv('HTSEQ-COUNT', 'htseq-count'),
+                    '--format', 'bam',
+                    '--mode', 'intersection-nonempty',
+                    '--stranded', 'no',
+                    '--secondary-alignments', 'ignore',
+                    '--supplementary-alignments', 'ignore',
+                    ] + mapped_fns + [
+                    args.annotationFile,
+                    ]
+                print(' '.join(call))
+                if not args.dry:
+                    output = sp.run(call, check=True, stdout=sp.PIPE).stdout.decode()
+                    with open(htseq_fn, 'wt') as fout:
+                        fout.write('\t'.join(['feature'] + samplenames)+'\n')
+                        fout.write(output)
+
         else:
             job_out_fn = log_fdn+'/{:}.out'.format(groupname)
             job_err_fn = log_fdn+'/{:}.err'.format(groupname)
@@ -177,5 +207,9 @@ if __name__ == '__main__':
                 ]
             if args.dry:
                 call.append('--dry')
+            if args.htseq and (ig == 0):
+                call.extend(['--htseq', ' '.join(samplenames)])
+                call.extend(['--annotationFile', args.annotationFile])
             print(' '.join(call))
-            sp.run(call, check=True) 
+            if not args.dry:
+                sp.run(call, check=True) 

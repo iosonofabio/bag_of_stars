@@ -10,6 +10,7 @@ import sys
 import argparse
 import subprocess as sp
 from pathlib import Path
+import time
 
 
 def printfl(*args):
@@ -40,6 +41,14 @@ if __name__ == '__main__':
             '--genomeDir',
             default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/STAR_DIR',
             help='Folder with the STAR genome hash')
+    pa.add_argument(
+            '--htseq',
+            default=None,
+            help='Call htseq-count on these subfolders at the end of the STAR mapping',
+    pa.add_argument(
+            '--annotationFile',
+            default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/human_tiny_with_ERCC.gtf',
+            help='File with the GTF feature annotations for htseq')
     args = pa.parse_args()
 
     args.output = args.output.rstrip('/')+'/'
@@ -105,3 +114,39 @@ if __name__ == '__main__':
         printfl(' '.join(call))
         if not args.dry:
             sp.run(call, check=True) 
+
+    if args.htseq is not None:
+        samplenames = args.htseq.split()
+
+        print('Wait for all STAR mapping from other jobs')
+        flag_fns = [args.output+sn+'/STAR.done' for sn in samplenames]
+        star_done = np.zeros(len(samplenames), bool)
+        is_first = True
+        while not star_done.all():
+            for isn, flag_fn in enumerate(flag_fns):
+                if os.path.isfile(flag_fn):
+                    star_done[isn] = True
+            
+            if not is_first:
+                time.sleep(60)
+                is_first = False
+
+        print('All STAR mappings done, call htseq-count')
+        mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in samplenames]
+        htseq_fn = args.output+'counts.tsv'
+        call = [
+            os.getenv('HTSEQ-COUNT', 'htseq-count'),
+            '--format', 'bam',
+            '--mode', 'intersection-nonempty',
+            '--stranded', 'no',
+            '--secondary-alignments', 'ignore',
+            '--supplementary-alignments', 'ignore',
+            ] + mapped_fns + [
+            args.annotationFile,
+            ]
+        print(' '.join(call))
+        if not args.dry:
+            output = sp.run(call, check=True, stdout=sp.PIPE).stdout.decode()
+            with open(htseq_fn, 'wt') as fout:
+                fout.write('\t'.join(['feature'] + samplenames)+'\n')
+                fout.write(output)
