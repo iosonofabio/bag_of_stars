@@ -18,6 +18,6 @@ python bag_of_stars.py --genomeDir <your STAR_DIR> --output <your output folder>
 - New subfolders with the same names will be made inside the output folder.
 
 ## Help
-``bash
+```bash
 python bag_of_stars.py --help
 ```
