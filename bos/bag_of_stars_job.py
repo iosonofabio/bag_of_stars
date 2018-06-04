@@ -39,17 +39,20 @@ if __name__ == '__main__':
         help='Parent folder for the output. For each input subfolder, an output subfolder will be made')
     pa.add_argument(
             '--genomeDir',
-            default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/STAR_DIR',
+            default=None,
             help='Folder with the STAR genome hash')
     pa.add_argument(
             '--htseq',
             default=None,
-            help='Call htseq-count on these subfolders at the end of the STAR mapping',
+            help='Call htseq-count on these subfolders at the end of the STAR mapping')
     pa.add_argument(
             '--annotationFile',
-            default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/human_tiny_with_ERCC.gtf',
+            default=None,
             help='File with the GTF feature annotations for htseq')
     args = pa.parse_args()
+
+    if args.htseq and (args.annotationFile is None):
+        raise ValueError('To run htseq-count, specify --annotationFile')
 
     args.output = args.output.rstrip('/')+'/'
     args.samplenames = args.samplenames.split(' ')
@@ -120,9 +123,9 @@ if __name__ == '__main__':
 
         print('Wait for all STAR mapping from other jobs')
         flag_fns = [args.output+sn+'/STAR.done' for sn in samplenames]
-        star_done = np.zeros(len(samplenames), bool)
+        star_done = [False for sn in samplenames]
         is_first = True
-        while not star_done.all():
+        while not all(star_done):
             for isn, flag_fn in enumerate(flag_fns):
                 if os.path.isfile(flag_fn):
                     star_done[isn] = True

@@ -34,7 +34,7 @@ if __name__ == '__main__':
             help='Number of samples per STAR call')
     pa.add_argument(
             '--genomeDir',
-            default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/STAR_DIR',
+            default=None,
             help='Folder with the STAR genome hash')
     pa.add_argument(
             '--local',
@@ -59,9 +59,13 @@ if __name__ == '__main__':
             )
     pa.add_argument(
             '--annotationFile',
-            default='/oak/stanford/groups/quake/fzanini/postdoc/bag_of_stars/data/human_genome/human_tiny_with_ERCC.gtf',
+            default=None,
             help='File with the GTF feature annotations for htseq')
     args = pa.parse_args()
+
+    print('Check input arguments')
+    if args.htseq and (args.annotationFile is None):
+        raise ValueError('To run htseq-count, specify --annotationFile')
 
     print('Make output root folder')
     args.output = args.output.rstrip('/')+'/'
