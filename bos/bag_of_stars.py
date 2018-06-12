@@ -30,7 +30,7 @@ if __name__ == '__main__':
     pa.add_argument(
             '-n',
             type=int,
-            default=400,
+            default=40,
             help='Number of samples per STAR call')
     pa.add_argument(
             '--genomeDir',
@@ -62,6 +62,11 @@ if __name__ == '__main__':
             default=None,
             help='File with the GTF feature annotations for htseq')
     args = pa.parse_args()
+
+    print('Find bag_of_stars_job.py')
+    job_fn = os.path.dirname(os.path.abspath(__file__))+'/bag_of_stars_job.py'
+    if not os.path.isfile(job_fn):
+        raise IOError('bag_of_stars_job.py not found')
 
     print('Check input arguments')
     if args.htseq and (args.annotationFile is None):
@@ -203,7 +208,7 @@ if __name__ == '__main__':
                 '--mem={:}'.format(args.mem),
                 '--time={:}'.format(args.time),
                 '--partition=quake,hns,normal',
-                'bag_of_stars_job.py',
+                job_fn,
                 '--output', args.output,
                 '--genomeDir', args.genomeDir,
                 '--samplenames', ' '.join(group),
