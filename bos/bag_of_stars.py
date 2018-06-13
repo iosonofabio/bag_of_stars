@@ -193,8 +193,8 @@ if __name__ == '__main__':
                         fout.write(output)
 
         else:
-            job_out_fn = log_fdn+'/{:}.out'.format(groupname)
-            job_err_fn = log_fdn+'/{:}.err'.format(groupname)
+            job_out_fn = log_fdn+'{:}.out'.format(groupname)
+            job_err_fn = log_fdn+'{:}.err'.format(groupname)
             fastqs = []
             for gfq in group_fastq:
                 fastqs.extend(list(gfq))
@@ -209,6 +209,7 @@ if __name__ == '__main__':
                 '--time={:}'.format(args.time),
                 '--partition=quake,hns,normal',
                 job_fn,
+                '--group-name', str(ig+1),
                 '--output', args.output,
                 '--genomeDir', args.genomeDir,
                 '--samplenames', ' '.join(group),
@@ -216,9 +217,11 @@ if __name__ == '__main__':
                 ]
             if args.dry:
                 call.append('--dry')
-            if args.htseq and (ig == 0):
-                call.extend(['--htseq', ' '.join(samplenames)])
+            if args.htseq:
+                call.append('--htseq')
                 call.extend(['--annotationFile', args.annotationFile])
+            if args.htseq and (ig == 0):
+                call.extend(['--chain-htseq', str(len(groups))])
             print(' '.join(call))
             if not args.dry:
                 sp.run(call, check=True) 

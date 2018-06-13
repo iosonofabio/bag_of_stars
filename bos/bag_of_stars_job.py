@@ -8,6 +8,8 @@ content:    Bag of stars, single bad (cluster job)
 import os
 import sys
 import argparse
+import numpy as np
+import pandas as pd
 import subprocess as sp
 from pathlib import Path
 import time
@@ -21,6 +23,10 @@ def printfl(*args):
 if __name__ == '__main__':
 
     pa = argparse.ArgumentParser(description='STAR + htseq-count in bags')
+    pa.add_argument(
+            '--group-name',
+            required=True,
+            help='Name of the group')
     pa.add_argument(
             '--samplenames',
             required=True,
@@ -43,8 +49,12 @@ if __name__ == '__main__':
             help='Folder with the STAR genome hash')
     pa.add_argument(
             '--htseq',
+            action='store_true',
+            help='Run htseq-count at the end')
+    pa.add_argument(
+            '--chain-htseq',
             default=None,
-            help='Call htseq-count on these subfolders at the end of the STAR mapping')
+            help='Chain htseq counts on these subfolders at the end of the every single htseq-count call')
     pa.add_argument(
             '--annotationFile',
             default=None,
@@ -54,17 +64,28 @@ if __name__ == '__main__':
     if args.htseq and (args.annotationFile is None):
         raise ValueError('To run htseq-count, specify --annotationFile')
 
+    if args.chain_htseq and (args.annotationFile is None):
+        raise ValueError('To run htseq-count, specify --annotationFile')
+
     args.output = args.output.rstrip('/')+'/'
     args.samplenames = args.samplenames.split(' ')
     args.fastqs = args.fastqs.split(' ')
     group = args.samplenames
     group_fastq = list(zip(args.fastqs[::2], args.fastqs[1::2]))
+    output_tmp_star = args.output+'STAR_TMP_group_{:}/'.format(args.group_name)
+
+    printfl('Remove previous STAR temp dir')
+    if not args.dry:
+        sp.run('rm -rf {:}'.format(output_tmp_star),
+               check=True,
+               shell=True)
 
     printfl('Load genome into memory')
     call = [
         os.getenv('STAR', 'STAR'),
         '--genomeDir', args.genomeDir,
         '--genomeLoad', 'LoadAndExit',
+        '--outTmpDir', output_tmp_star,
         ]
     printfl(' '.join(call))
     if not args.dry:
@@ -72,6 +93,12 @@ if __name__ == '__main__':
 
     try:
         for sn, (fq1, fq2) in zip(group, group_fastq):
+            printfl('Remove previous STAR temp dir')
+            if not args.dry:
+                sp.run('rm -rf {:}'.format(output_tmp_star),
+                       check=True,
+                       shell=True)
+
             printfl('Mapping sample {:}'.format(sn))
             flag_fn = args.output+sn+'/STAR.done'
             if os.path.isfile(flag_fn):
@@ -82,6 +109,7 @@ if __name__ == '__main__':
                 '--runMode', 'alignReads',
                 '--genomeDir', args.genomeDir,
                 '--genomeLoad', 'LoadAndKeep',
+                '--outTmpDir', output_tmp_star,
                 '--readFilesIn', fq1, fq2,
                 '--readFilesCommand', 'zcat',
                 '--outFilterType', 'BySJout',
@@ -108,35 +136,37 @@ if __name__ == '__main__':
                 Path(flag_fn).touch()
 
     finally:
+        printfl('Remove previous STAR temp dir')
+        if not args.dry:
+            sp.run('rm -rf {:}'.format(output_tmp_star),
+                   check=True,
+                   shell=True)
+
         printfl('Remove genome from memory')
         call = [
             os.getenv('STAR', 'STAR'),
             '--genomeDir', args.genomeDir,
             '--genomeLoad', 'Remove',
+            '--outTmpDir', output_tmp_star,
             ]
         printfl(' '.join(call))
         if not args.dry:
-            sp.run(call, check=True) 
+            try:
+                sp.run(call, check=True) 
+            except sp.CalledProcessError as e:
+                print(e)
+                print('Moving on')
+
+        printfl('Remove previous STAR temp dir')
+        if not args.dry:
+            sp.run('rm -rf {:}'.format(output_tmp_star),
+                   check=True,
+                   shell=True)
 
     if args.htseq is not None:
-        samplenames = args.htseq.split()
-
-        print('Wait for all STAR mapping from other jobs')
-        flag_fns = [args.output+sn+'/STAR.done' for sn in samplenames]
-        star_done = [False for sn in samplenames]
-        is_first = True
-        while not all(star_done):
-            for isn, flag_fn in enumerate(flag_fns):
-                if os.path.isfile(flag_fn):
-                    star_done[isn] = True
-            
-            if not is_first:
-                time.sleep(60)
-                is_first = False
-
-        print('All STAR mappings done, call htseq-count')
-        mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in samplenames]
-        htseq_fn = args.output+'counts.tsv'
+        print('STAR mappings done, call htseq-count')
+        mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in group]
+        htseq_fn = args.output+'counts_group_{:}.tsv'.format(args.group_name)
         call = [
             os.getenv('HTSEQ-COUNT', 'htseq-count'),
             '--format', 'bam',
@@ -151,5 +181,53 @@ if __name__ == '__main__':
         if not args.dry:
             output = sp.run(call, check=True, stdout=sp.PIPE).stdout.decode()
             with open(htseq_fn, 'wt') as fout:
-                fout.write('\t'.join(['feature'] + samplenames)+'\n')
+                fout.write('\t'.join(['feature'] + group)+'\n')
                 fout.write(output)
+
+    if args.chain_htseq is not None:
+        n_groups = int(args.chain_htseq)
+
+        print('Wait for all STAR + htseq-count from other jobs')
+        flag_fns = [args.output+'counts_group_{:}.tsv'.format(ig+1) for ig in range(n_groups)]
+        jobs_done = [False for ig in range(n_groups)]
+        is_first = True
+        while not all(jobs_done):
+            for isn, flag_fn in enumerate(flag_fns):
+                if os.path.isfile(flag_fn):
+                    jobs_done[isn] = True
+            
+            if not is_first:
+                time.sleep(60)
+                is_first = False
+
+        print('All STAR +htseq-count, chaining counts')
+        counts_fns = [args.output+'counts_group_{:}.tsv'.format(ig+1) for ig in range(n_groups)]
+        htseq_fn = args.output+'counts.tsv'
+        if not args.dry:
+            samplenames = []
+            n_samples_max = n_groups * len(group)
+            first_group = True
+            for ig, counts_fn in enumerate(counts_fns):
+                print('Reading counts for group {:}'.format(ig+1))
+                counts = pd.read_csv(counts_fn, sep='\t', index_col=0)
+                if first_group:
+                    first_group = False
+                    n_features = counts.shape[0]
+                    features = counts.index
+                    counts_all = np.zeros(
+                            (n_features, n_samples_max),
+                            dtype=np.float32,
+                            )
+                print('Chaining counts for group {:}'.format(ig+1))
+                counts_all[:, len(samplenames): len(samplenames) + counts.shape[1]] = counts.values.astype(np.float32)
+                samplenames.extend(counts.columns.tolist())
+
+            print('Merging all into a dataframe')
+            counts_all = pd.DataFrame(
+                    data=counts_all[:, :len(samplenames)],
+                    index=features,
+                    columns=samplenames,
+                    )
+            print('Writing all counts to file: {:}'.format(htseq_fn))
+            counts_all.to_csv(htseq_fn, sep='\t', index=True)
+
