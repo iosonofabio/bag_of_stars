@@ -169,7 +169,7 @@ if __name__ == '__main__':
         has_failed = False
         mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in group]
         for mapped_fn in mapped_fns:
-            print(os.path.dirname(mapped_fns)+'...', end='', flush=True)
+            print(os.path.dirname(mapped_fn)+'...', end='', flush=True)
             try:
                 with pysam.AlignmentFile(mapped_fn, 'rb') as bamfile:
                     for read in bamfile:
@@ -211,7 +211,7 @@ if __name__ == '__main__':
             for isn, flag_fn in enumerate(flag_fns):
                 if os.path.isfile(flag_fn):
                     jobs_done[isn] = True
-            
+
             if not is_first:
                 time.sleep(60)
                 is_first = False
