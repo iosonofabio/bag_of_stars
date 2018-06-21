@@ -13,6 +13,7 @@ import pandas as pd
 import subprocess as sp
 from pathlib import Path
 import time
+import pysam
 
 
 def printfl(*args):
@@ -132,7 +133,7 @@ if __name__ == '__main__':
                            ]
             printfl(' '.join(call))
             if not args.dry:
-                sp.run(call, check=True) 
+                sp.run(call, check=True)
                 Path(flag_fn).touch()
 
     finally:
@@ -152,7 +153,7 @@ if __name__ == '__main__':
         printfl(' '.join(call))
         if not args.dry:
             try:
-                sp.run(call, check=True) 
+                sp.run(call, check=True)
             except sp.CalledProcessError as e:
                 print(e)
                 print('Moving on')
@@ -164,8 +165,23 @@ if __name__ == '__main__':
                    shell=True)
 
     if args.htseq is not None:
-        print('STAR mappings done, call htseq-count')
+        print('STAR mappings done, check output BAM files')
+        has_failed = False
         mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in group]
+        for mapped_fn in mapped_fns:
+            print(os.path.dirname(mapped_fns)+'...', end='', flush=True)
+            try:
+                with pysam.AlignmentFile(mapped_fn, 'rb') as bamfile:
+                    for read in bamfile:
+                        break
+                print('OK', flush=True)
+            except IOError:
+                has_failed = True
+                print('Failed!', flush=True)
+        if has_failed:
+            raise IOError('One or more BAM files failed to map')
+
+        print('Call htseq-count')
         htseq_fn = args.output+'counts_group_{:}.tsv'.format(args.group_name)
         call = [
             os.getenv('HTSEQ-COUNT', 'htseq-count'),
