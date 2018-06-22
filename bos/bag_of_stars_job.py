@@ -174,6 +174,8 @@ if __name__ == '__main__':
                 with pysam.AlignmentFile(mapped_fn, 'rb') as bamfile:
                     for read in bamfile:
                         break
+                    else:
+                        raise IOError('Zero reads in {:}'.format(mapped_fn))
                 print('OK', flush=True)
             except IOError:
                 has_failed = True
