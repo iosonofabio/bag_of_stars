@@ -10,6 +10,7 @@ import glob
 import argparse
 import subprocess as sp
 from pathlib import Path
+import pysam
 
 
 
@@ -61,6 +62,10 @@ if __name__ == '__main__':
             '--annotationFile',
             default=None,
             help='File with the GTF feature annotations for htseq')
+    pa.add_argument(
+            '--delete-empty-BAM',
+            action='store_true',
+            help='Delete Aligned.out.bam if it contains zero reads')
     args = pa.parse_args()
 
     print('Find bag_of_stars_job.py')
@@ -108,7 +113,7 @@ if __name__ == '__main__':
     groups = [samplenames[i * n: (i+1) * n] for i in range(n_groups)]
     group_fastqs = [fn_fastqs[i * n: (i+1) * n] for i in range(n_groups)]
     print('{:} groups'.format(n_groups))
-    
+
     print('Run STAR')
     for ig, (group, group_fastq) in enumerate(zip(groups, group_fastqs)):
         groupname = 'group_{:}'.format(ig+1)
@@ -121,7 +126,7 @@ if __name__ == '__main__':
                 ]
             print(' '.join(call))
             if not args.dry:
-                sp.run(call, check=True) 
+                sp.run(call, check=True)
 
             try:
                 for sn, (fq1, fq2) in zip(group, group_fastq):
@@ -157,7 +162,7 @@ if __name__ == '__main__':
                         ]
                     print(' '.join(call))
                     if not args.dry:
-                        sp.run(call, check=True) 
+                        sp.run(call, check=True)
                         Path(flag_fn).touch()
 
             finally:
@@ -169,11 +174,31 @@ if __name__ == '__main__':
                     ]
                 print(' '.join(call))
                 if not args.dry:
-                    sp.run(call, check=True) 
+                    sp.run(call, check=True)
 
             if args.htseq:
-                print('All STAR mappings done, call htseq-count')
+                print('STAR mappings done, check output BAM files')
                 mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in samplenames]
+                has_failed = False
+                for mapped_fn in mapped_fns:
+                    print(os.path.dirname(mapped_fn)+'...', end='', flush=True)
+                    try:
+                        with pysam.AlignmentFile(mapped_fn, 'rb') as bamfile:
+                            for read in bamfile:
+                                break
+                            else:
+                                raise IOError('Zero reads in {:}'.format(mapped_fn))
+                        print('OK', flush=True)
+                    except IOError:
+                        has_failed = True
+                        print('Failed!', flush=True)
+                        if args.delete_empty_BAM:
+                            print('Remove file: {:}'.format(mapped_fn), flush=True)
+                            os.remove(mapped_fn)
+                if has_failed:
+                    raise IOError('One or more BAM files failed to map')
+
+                print('Call htseq-count')
                 htseq_fn = args.output+'counts.tsv'
                 call = [
                     os.getenv('HTSEQ-COUNT', 'htseq-count'),
@@ -217,6 +242,8 @@ if __name__ == '__main__':
                 ]
             if args.dry:
                 call.append('--dry')
+            if args.delete_empty_BAM:
+                call.append('--delete-empty-BAM')
             if args.htseq:
                 call.append('--htseq')
                 call.extend(['--annotationFile', args.annotationFile])
@@ -224,4 +251,4 @@ if __name__ == '__main__':
                 call.extend(['--chain-htseq', str(len(groups))])
             print(' '.join(call))
             if not args.dry:
-                sp.run(call, check=True) 
+                sp.run(call, check=True)

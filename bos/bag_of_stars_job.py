@@ -60,6 +60,10 @@ if __name__ == '__main__':
             '--annotationFile',
             default=None,
             help='File with the GTF feature annotations for htseq')
+    pa.add_argument(
+            '--delete-empty-BAM',
+            action='store_true',
+            help='Delete Aligned.out.bam if it contains zero reads')
     args = pa.parse_args()
 
     if args.htseq and (args.annotationFile is None):
@@ -166,8 +170,8 @@ if __name__ == '__main__':
 
     if args.htseq is not None:
         print('STAR mappings done, check output BAM files')
-        has_failed = False
         mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in group]
+        has_failed = False
         for mapped_fn in mapped_fns:
             print(os.path.dirname(mapped_fn)+'...', end='', flush=True)
             try:
@@ -180,6 +184,9 @@ if __name__ == '__main__':
             except IOError:
                 has_failed = True
                 print('Failed!', flush=True)
+                if args.delete_empty_BAM:
+                    print('Remove file: {:}'.format(mapped_fn), flush=True)
+                    os.remove(mapped_fn)
         if has_failed:
             raise IOError('One or more BAM files failed to map')
 
