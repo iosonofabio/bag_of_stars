@@ -94,7 +94,7 @@ if __name__ == '__main__':
         ]
     printfl(' '.join(call))
     if not args.dry:
-        sp.run(call, check=True) 
+        sp.run(call, check=True)
 
     try:
         for sn, (fq1, fq2) in zip(group, group_fastq):
@@ -172,7 +172,7 @@ if __name__ == '__main__':
         print('STAR mappings done, check output BAM files')
         mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in group]
         has_failed = False
-        for mapped_fn in mapped_fns:
+        for sn, mapped_fn in zip(group, mapped_fns):
             print(os.path.dirname(mapped_fn)+'...', end='', flush=True)
             try:
                 with pysam.AlignmentFile(mapped_fn, 'rb') as bamfile:
@@ -185,8 +185,11 @@ if __name__ == '__main__':
                 has_failed = True
                 print('Failed!', flush=True)
                 if args.delete_empty_BAM:
-                    print('Remove file: {:}'.format(mapped_fn), flush=True)
+                    flag_fn = args.output+sn+'/STAR.done'
+                    print('Remove BAM file: {:}'.format(mapped_fn), flush=True)
                     os.remove(mapped_fn)
+                    print('Remove flag file: {:}'.format(flag_fn), flush=True)
+                    os.remove(flag_fn)
         if has_failed:
             raise IOError('One or more BAM files failed to map')
 
@@ -255,4 +258,3 @@ if __name__ == '__main__':
                     )
             print('Writing all counts to file: {:}'.format(htseq_fn))
             counts_all.to_csv(htseq_fn, sep='\t', index=True)
-
