@@ -129,7 +129,7 @@ if __name__ == '__main__':
                 '--outSAMstrandField', 'intronMotif',
                 '--outFileNamePrefix', args.output+sn+'/',
                 '--outSAMtype', 'BAM', 'Unsorted',
-                '--outSAMattributes', 'NH', 'HI', 'AS', 'NM', 'MD',
+                '--outSAMattributes', 'NH', 'HI', 'AS', 'NM',
                            '--outFilterMatchNminOverLread', '0.4',
                            '--outFilterScoreMinOverLread', '0.4',
                            '--clip3pAdapterSeq', 'CTGTCTCTTATACACATCT',
