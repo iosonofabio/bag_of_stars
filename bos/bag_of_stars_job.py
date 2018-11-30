@@ -33,6 +33,22 @@ class BagOfStars(object):
                 self.need_star = True
                 return
 
+    def check_executable_STAR(self):
+        call = [
+            os.getenv('STAR', 'STAR'),
+            '--version',
+            ]
+        printfl(' '.join(call))
+        sp.run(call, check=True)
+
+    def check_executable_htseq_count(self):
+        call = [
+            os.getenv('HTSEQ-COUNT', 'htseq-count'),
+            '--help',
+            ]
+        printfl(' '.join(call))
+        sp.run(call, check=True)
+
 
 if __name__ == '__main__':
 
@@ -102,6 +118,9 @@ if __name__ == '__main__':
                shell=True)
 
     if bos.need_star:
+        printfl('Check for STAR availability')
+        bos.check_executable_STAR()
+
         printfl('Load genome into memory')
         call = [
             os.getenv('STAR', 'STAR'),
@@ -189,7 +208,10 @@ if __name__ == '__main__':
         printfl('All samples in this group are mapped already, no need for STAR.')
 
     if args.htseq:
-        print('STAR mappings done, check output BAM files')
+        printfl('Check for htseq-count availability')
+        bos.check_executable_htseq_count()
+
+        print('Check STAR output BAM files')
         mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in bos.group]
         has_failed = False
         for sn, mapped_fn in zip(bos.group, mapped_fns):
