@@ -205,7 +205,7 @@ if __name__ == '__main__':
             ] + mapped_fns + [
             args.annotationFile,
             ]
-        print(' '.join(call))
+        printfl(' '.join(call))
         if not args.dry:
             output = sp.run(call, check=True, stdout=sp.PIPE).stdout.decode()
             with open(htseq_fn, 'wt') as fout:
