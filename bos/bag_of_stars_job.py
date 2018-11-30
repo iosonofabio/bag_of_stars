@@ -117,6 +117,7 @@ if __name__ == '__main__':
                check=True,
                shell=True)
 
+    bos.check_need_star_genome()
     if bos.need_star:
         printfl('Check for STAR availability')
         bos.check_executable_STAR()
