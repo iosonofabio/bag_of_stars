@@ -39,7 +39,7 @@ class BagOfStars(object):
             '--version',
             ]
         printfl(' '.join(call))
-        sp.run(call, check=True)
+        sp.run(call, check=True, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
 
     def check_executable_htseq_count(self):
         call = [
@@ -47,7 +47,7 @@ class BagOfStars(object):
             '--help',
             ]
         printfl(' '.join(call))
-        sp.run(call, check=True)
+        sp.run(call, check=True, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
 
 
 if __name__ == '__main__':
