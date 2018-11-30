@@ -208,8 +208,8 @@ class BagOfStars(object):
             '--group-name', str(ig+1),
             '--output', self.args.output,
             '--genomeDir', self.args.genomeDir,
-            '--samplenames', ' '.join(group['names']),
-            '--fastqs', ' '.join(fastqs),
+            '--samplenames', "'{:}'".format(' '.join(group['names'])),
+            '--fastqs', "'{:}'".format(' '.join(fastqs)),
             ]
         if self.args.dry:
             call.append('--dry')
