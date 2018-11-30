@@ -73,8 +73,8 @@ if __name__ == '__main__':
         raise ValueError('To run htseq-count, specify --annotationFile')
 
     args.output = args.output.rstrip('/')+'/'
-    args.samplenames = args.samplenames.split(' ')
-    args.fastqs = args.fastqs.split(' ')
+    args.samplenames = args.samplenames.strip("'").split(' ')
+    args.fastqs = args.fastqs.strip("'").split(' ')
     group = args.samplenames
     group_fastq = list(zip(args.fastqs[::2], args.fastqs[1::2]))
     output_tmp_star = args.output+'STAR_TMP_group_{:}/'.format(args.group_name)
