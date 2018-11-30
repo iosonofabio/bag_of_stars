@@ -168,7 +168,7 @@ if __name__ == '__main__':
                    check=True,
                    shell=True)
 
-    if args.htseq is not None:
+    if args.htseq:
         print('STAR mappings done, check output BAM files')
         mapped_fns = [args.output+sn+'/Aligned.out.bam' for sn in group]
         has_failed = False
