@@ -203,7 +203,7 @@ class BagOfStars(object):
             '--cpus-per-task={:}'.format(self.args.cpus_per_task),
             '--mem={:}'.format(self.args.mem),
             '--time={:}'.format(self.args.time),
-            '--partition=quake,hns,normal',
+            '--partition={:}'.format(self.args.partition),
             job_fn,
             '--group-name', str(ig+1),
             '--output', self.args.output,
@@ -278,6 +278,10 @@ if __name__ == '__main__':
             '--delete-empty-BAM',
             action='store_true',
             help='Delete Aligned.out.bam if it contains zero reads')
+    pa.add_argument(
+            '--partition',
+            default='quake,hns,normal',
+            help='Partition to use if running on a cluster')
     args = pa.parse_args()
 
     bos = BagOfStars(args)
