@@ -280,7 +280,7 @@ if __name__ == '__main__':
             help='Delete Aligned.out.bam if it contains zero reads')
     pa.add_argument(
             '--partition',
-            default='quake,hns,normal',
+            default='quake,owners,normal',
             help='Partition to use if running on a cluster')
     args = pa.parse_args()
 
