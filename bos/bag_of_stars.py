@@ -230,25 +230,26 @@ if __name__ == '__main__':
     pa = argparse.ArgumentParser(description='STAR mapping in bags')
     pa.add_argument(
         '--fastqFolder',
-        default=None,
+        required=True,
         help='Parent folder of subfolders with 2 fastq.gz files in each.')
-    pa.add_argument(
-        '--dry',
-        action='store_true',
-        help='Dry run')
     pa.add_argument(
         '--output',
         required=True,
         help='Parent folder for the output. For each input subfolder, an output subfolder will be made')
     pa.add_argument(
+            '--genomeDir',
+            required=True,
+            help='Folder with the STAR genome hash')
+
+    pa.add_argument(
+        '--dry',
+        action='store_true',
+        help='Dry run')
+    pa.add_argument(
             '-n',
             type=int,
             default=40,
             help='Number of samples per STAR call')
-    pa.add_argument(
-            '--genomeDir',
-            default=None,
-            help='Folder with the STAR genome hash')
     pa.add_argument(
             '--local',
             action='store_true',
